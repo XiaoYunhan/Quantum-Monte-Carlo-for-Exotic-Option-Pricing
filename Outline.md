@@ -8,26 +8,26 @@ Monte Carlo (MC) methods provide a widely used numerical approach to pricing fin
 ### Monte Carlo Simulation for Option Pricing
 
 The risk-neutral price of an option with payoff function $f(S_T)$ at maturity $T$ is given by:
-\[
+```math
 \Pi = e^{-rT} \mathbb{E}^{\mathbb{Q}}[ f(S_T) ]
-\]
+```
 where $\mathbb{Q}$ denotes the risk-neutral measure, $S_T$ represents the terminal asset price, and $r$ is the risk-free rate.
 
 In Monte Carlo simulation, we approximate this expectation using a large number of simulated asset price paths $\{ S_T^{(i)} \}_{i=1}^{k}$ and estimate the option price as:
-\[
+```math
 \hat{\Pi} = e^{-rT} \frac{1}{k} \sum_{i=1}^{k} f(S_T^{(i)}).
-\]
+```
 By the **law of large numbers**, $\hat{\Pi}$ converges to the true price $\Pi$ as $k \to \infty$.
 
 ### Asset Price Simulation with Different Models
 The standard approach to modeling asset prices in MC simulation follows a **Geometric Brownian Motion (GBM)** process:
-\[
+```math
  dS_t = r S_t dt + \sigma S_t dW_t,
-\]
+```
 where $\sigma$ is the volatility and $W_t$ is a standard Wiener process. The discrete-time solution for asset price evolution is given by:
-\[
+```math
  S_{t+\Delta t} = S_t \exp \left( (r - \frac{1}{2} \sigma^2) \Delta t + \sigma \sqrt{\Delta t} Z_t \right),
-\]
+```
 where $Z_t \sim \mathcal{N}(0,1)$ are independent standard normal variables.
 
 Other models tested include:
@@ -44,13 +44,13 @@ Empirical testing shows that while these models introduce different price path d
 
 ### Convergence and Error Analysis
 From Chebyshev’s inequality, the probability that the MC estimator deviates from the true price by more than $\epsilon$ is bounded by:
-\[
+```math
  \mathbb{P}[ |\hat{\Pi} - \Pi| \geq \epsilon ] \leq \frac{\lambda^2}{k \epsilon^2},
-\]
+```
 where $\lambda^2$ is the variance of the payoff function. To achieve a given accuracy $\epsilon$, the required number of simulations scales as:
-\[
+```math
  k = \mathcal{O} \left( \frac{\lambda^2}{\epsilon^2} \right).
-\]
+```
 Thus, MC simulations converge at a rate of **$\mathcal{O}(k^{-1/2})$**, meaning that to halve the error, we need to quadruple the number of simulations.
 
 ### Variance Reduction Techniques
@@ -71,9 +71,9 @@ These results highlight the effectiveness of variance reduction in **improving a
 ### Monte Carlo for Exotic Options
 Monte Carlo methods are particularly useful for **exotic options**, which depend on the entire price path rather than a single terminal value. 
 - **Asian options** depend on the average price over a time period:
-  \[
+  ```math
   S_{avg} = \frac{1}{n} \sum_{t=1}^{n} S_t.
-  \]
+  ```
   The option payoff is then $f(S_{avg})$ instead of $f(S_T)$.
 - **American options** require estimating early exercise value at each time step, often using Least Squares Monte Carlo (LSMC).
 
