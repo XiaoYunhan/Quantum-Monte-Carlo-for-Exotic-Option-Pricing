@@ -10,10 +10,17 @@
     - [Monte Carlo for Exotic Options](#monte-carlo-for-exotic-options)
   - [Quantum Monte Carlo](#quantum-monte-carlo)
     - [Quantum Amplitude Estimation](#quantum-amplitude-estimation)
-    - [QMC for European Option Pricing](#qmc-for-european-option-pricing)
-    - [QMC for Asian Option Pricing](#qmc-for-asian-option-pricing)
-    - [QMC for Barrier Options Pricing](#qmc-for-barrier-options-pricing)
-    - [QMC for Digital Pricing](#qmc-for-digital-pricing)
+    - [Quantum Monte Carlo for European Option Pricing](#quantum-monte-carlo-for-european-option-pricing)
+      - [Uncertainty Model](#uncertainty-model)
+      - [Payoff Function Implementation](#payoff-function-implementation)
+      - [Delta Evaluation](#delta-evaluation)
+      - [Example Quantum Implementation](#example-quantum-implementation)
+    - [Quantum Monte Carlo for Asian Option Pricing](#quantum-monte-carlo-for-asian-option-pricing)
+    - [Quantum Monte Carlo for Barrier Options Pricing](#quantum-monte-carlo-for-barrier-options-pricing)
+      - [Uncertainty Model](#uncertainty-model-1)
+      - [Payoff Function Implementation](#payoff-function-implementation-1)
+      - [Quantum Circuit Example](#quantum-circuit-example)
+    - [Quantum Monte Carlo for Digital Pricing](#quantum-monte-carlo-for-digital-pricing)
   - [Other Quantum Approaches for Exotic Option Pricing](#other-quantum-approaches-for-exotic-option-pricing)
     - [Option Pricing with qGANs](#option-pricing-with-qgans)
   - [Future Improvement](#future-improvement)
@@ -139,19 +146,195 @@ Monte Carlo provides a general, flexible framework for pricing such options, tho
 
 [4] Faster Amplitude Estimation. K. Nakaji (2020). https://arxiv.org/pdf/2003.02417.pdf
 
+### Quantum Monte Carlo for European Option Pricing
 
-### QMC for European Option Pricing
+Quantum Monte Carlo (QMC) techniques offer a powerful alternative to classical Monte Carlo methods for pricing European call options. Consider a European call option characterized by a strike price $K$ and an underlying asset whose maturity spot price $S_T$ follows a given probability distribution. The payoff of this option at maturity is given by:
+
+```math
+\max\{S_T - K, 0\}
+```
+
+Our primary goal is to estimate the expected payoff, which directly represents the fair value of the option before discounting:
+
+```math
+\mathbb{E}\left[ \max\{S_T - K, 0\} \right]
+```
+
+Additionally, we seek to compute the sensitivity measure known as Delta ($\Delta$), defined as the derivative of the option's price with respect to the underlying spot price:
+
+```math
+\Delta = \mathbb{P}(S_T \geq K)
+```
+
+#### Uncertainty Model
+
+To implement QMC, we first construct a quantum circuit encoding the underlying asset price uncertainty. Assuming the asset price $S_T$ follows a log-normal distribution, we discretize and truncate this distribution over an interval $[\text{low}, \text{high}]$, dividing it into $2^n$ grid points, where $n$ is the number of allocated qubits. The resulting quantum state encodes the probability distribution of prices as:
+
+```math
+|\psi\rangle = \sum_{i=0}^{2^n-1} \sqrt{p_i}|i\rangle,
+```
+
+where each basis state $|i\rangle$ corresponds to a discrete price level obtained through an affine transformation:
+
+```math
+i \mapsto \frac{\text{high} - \text{low}}{2^n - 1} i + \text{low}.
+```
+
+This quantum encoding enables efficient manipulation and subsequent payoff evaluations using amplitude estimation.
+
+#### Payoff Function Implementation
+
+The payoff function exhibits linearity above the strike price $K$ and is zero otherwise. This conditional payoff is implemented through:
+
+1. A **quantum comparator** circuit, which sets an ancilla qubit if the spot price $S_T$ meets or exceeds the strike price $K$.
+2. A controlled **piecewise linear approximation** to represent the linear payoff beyond the threshold. We exploit the approximation:
+
+```math
+\sin^2\left(\frac{\pi}{2} c_{\text{approx}} \left(x - \frac{1}{2}\right) + \frac{\pi}{4}\right) \approx \frac{\pi}{2} c_{\text{approx}} \left(x - \frac{1}{2}\right) + \frac{1}{2}, \quad \text{for small } c_{\text{approx}}.
+```
+
+Controlled quantum rotations effectively encode this approximation into quantum amplitudes, allowing precise quantum computations of the expected payoff.
+
+#### Delta Evaluation
+
+The Delta calculation is straightforward compared to the expected payoff. Since Delta measures the probability that the option expires in the money, it directly uses the comparator circuit's ancilla qubit. Thus, amplitude estimation is employed directly on the comparator's output without further approximation.
+
+#### Example Quantum Implementation
+
+A minimal implementation illustrating this approach using Qiskit is provided below:
+
+```python
+from qiskit_finance.applications.estimation import EuropeanCallDelta, LogNormalDistribution, LinearAmplitudeFunction
+num_uncertainty_qubits = 3
+# Parameters for the underlying asset's log-normal distribution
+S, vol, r, T = 2.0, 0.4, 0.05, 40 / 365
+mu = (r - 0.5 * vol**2) * T + np.log(S)
+sigma = vol * np.sqrt(T)
+mean = np.exp(mu + sigma**2 / 2)
+stddev = np.sqrt((np.exp(sigma**2) - 1) * np.exp(2 * mu + sigma**2))
+low, high = max(0, mean - 3 * stddev), mean + 3 * stddev
+# Quantum uncertainty model
+uncertainty_model = LogNormalDistribution(
+    num_uncertainty_qubits, mu=mu, sigma=sigma**2, bounds=(low, high)
+)
+# Option parameters
+strike_price, c_approx = 1.896, 0.25
+breakpoints = [low, strike_price]
+slopes, offsets = [0, 1], [0, 0]
+f_min, f_max = 0, high - strike_price
+# Quantum objective function for payoff approximation
+european_call_objective = LinearAmplitudeFunction(
+    num_uncertainty_qubits,
+    slopes,
+    offsets,
+    domain=(low, high),
+    image=(f_min, f_max),
+    breakpoints=breakpoints,
+    rescaling_factor=c_approx,
+)
+# Combine uncertainty and payoff models
+num_qubits = european_call_objective.num_qubits
+european_call_circuit = QuantumCircuit(num_qubits)
+european_call_circuit.append(uncertainty_model, range(num_uncertainty_qubits))
+european_call_circuit.append(european_call_objective, range(num_qubits))
+# Direct Delta evaluation via amplitude estimation
+european_call_delta = EuropeanCallDelta(
+    num_state_qubits=num_uncertainty_qubits,
+    strike_price=strike_price,
+    bounds=(low, high),
+    uncertainty_model=uncertainty_model,
+)
+```
+
+This example highlights the seamless integration of quantum state preparation, amplitude estimation, and payoff evaluation, clearly illustrating the advantages offered by Quantum Monte Carlo in European option pricing.
 
 [1] Quantum Risk Analysis. Woerner, S., & Egger, D. J. (2019). https://www.nature.com/articles/s41534-019-0130-6
 
 [2] Option Pricing using Quantum Computers. Stamatopoulos, N., Egger, D. J., Sun, Y., Zoufal, C., Iten, R., Shen, N., & Woerner, S. (2020). https://quantum-journal.org/papers/q-2020-07-06-291/
 
 
-### QMC for Asian Option Pricing
+### Quantum Monte Carlo for Asian Option Pricing
 
-### QMC for Barrier Options Pricing
 
-### QMC for Digital Pricing
+### Quantum Monte Carlo for Barrier Options Pricing
+
+In this section, we apply Quantum Monte Carlo (QMC) techniques specifically to barrier basket options, characterized by a payoff function of the form:
+
+```math
+\max\{S_T^1 + S_T^2 - K, 0\}
+```
+
+where $ S_T^1 $ and $ S_T^2 $ denote the asset prices at maturity and $ K $ is the strike price. The core objective is to estimate the expected payoff:
+
+```math
+\mathbb{E}\left[\max\{S_T^1 + S_T^2 - K, 0\}\right]
+```
+
+by leveraging quantum amplitude estimation, a quantum algorithm capable of efficiently approximating expectations by analyzing probability distributions encoded into quantum states.
+
+#### Uncertainty Model
+
+The uncertainty in asset prices at maturity is modeled by preparing a quantum state encoding the joint probability distribution of asset prices $S_T^1$ and $S_T^2$. For simplicity, we assume that the underlying assets follow independent lognormal distributions, although correlated scenarios could also be accommodated with slight modifications.
+
+Each asset’s price is discretized onto a finite grid defined by $2^{n_j}$ points within intervals $[\text{low}_j, \text{high}_j]$, where $n_j$ denotes the number of qubits assigned to asset $j$. Thus, the quantum state encoding both assets simultaneously becomes:
+
+```math
+|\psi\rangle = \sum_{i_1,i_2} \sqrt{p_{i_1,i_2}} |i_1\rangle |i_2\rangle,
+```
+
+where each computational basis state $|i_j\rangle$ maps back to the physical asset price via an affine transformation:
+
+```math
+i_j \mapsto \frac{\text{high}_j - \text{low}_j}{2^{n_j} - 1} i_j + \text{low}_j.
+```
+
+This encoding step is critical, accurately capturing the underlying statistical distributions required for reliable expectation estimation.
+
+#### Payoff Function Implementation
+
+To evaluate the payoff, we need to implement the sum $S_T^1 + S_T^2$ within a quantum circuit and check whether this sum exceeds the strike price $K$. This involves:
+
+1. **Summation operator**: Using a quantum weighted adder, we calculate the sum of asset prices into an ancilla quantum register.
+2. **Quantum comparator**: A comparator then tests whether this aggregated sum meets or exceeds the strike price $K$. If the threshold is met, it triggers an ancilla qubit state change, activating the payoff logic.
+
+The payoff itself—linear beyond the strike threshold—is approximated using a controlled rotation on the quantum state. Specifically, we utilize a small-angle approximation based on trigonometric identities, efficiently mapping discrete quantum states to payoff values:
+
+```math
+\sin^2\left(\frac{\pi}{2} c_{\text{approx}} \left(x - \frac{1}{2}\right) + \frac{\pi}{4}\right) \approx \frac{\pi}{2} c_{\text{approx}} \left(x - \frac{1}{2}\right) + \frac{1}{2}, \quad \text{for small } |x - \frac{1}{2}|.
+```
+
+This approximation permits the linear portion of the payoff to be efficiently encoded into quantum amplitudes using controlled quantum rotations.
+
+#### Quantum Circuit Example
+
+Below is a succinct quantum circuit example illustrating the threshold comparison and payoff activation:
+
+```python
+from qiskit import QuantumCircuit, QuantumRegister, AncillaRegister
+from qiskit.circuit.library import WeightedAdder, IntegerComparator
+# Define registers
+num_qubits = [3, 3]  # Qubits per asset
+sum_qubits = sum(num_qubits)  # Total qubits for sum
+ancilla = AncillaRegister(1, "ancilla")  # Ancilla qubit for threshold check
+qr_state = QuantumRegister(sum_qubits, "state")  # Asset state register
+# Circuit initialization
+qc = QuantumCircuit(qr_state, ancilla)
+# Summation of S_T^1 and S_T^2
+weights = [2**i for i in range(sum_qubits)]
+weighted_adder = WeightedAdder(sum_qubits, weights)
+qc.append(weighted_adder, qr_state)
+# Comparison against strike price K
+strike_price = 5  # Example strike price
+comparator = IntegerComparator(sum_qubits, strike_price, geq=True)
+qc.append(comparator, qr_state[:] + ancilla[:])
+# Payoff activation (controlled rotation simplified example)
+qc.cx(ancilla[0], qr_state[0])
+qc.draw(output='mpl')
+```
+
+This illustrative example highlights the critical conditional logic distinguishing basket barrier options from other exotic types, capturing threshold conditions and linearly scaled payoffs within the quantum Monte Carlo framework.
+
+### Quantum Monte Carlo for Digital Pricing
 
 ## Other Quantum Approaches for Exotic Option Pricing
 
@@ -170,7 +353,7 @@ Monte Carlo provides a general, flexible framework for pricing such options, tho
 This appendix provides a concise yet rigorous introduction to quantum computing concepts relevant to option pricing models. The primary advantage of quantum computing in finance lies in its ability to process large probability distributions efficiently, offering potential speedups for Monte Carlo simulations and differential equation solvers.
 
 #### 1. Qubits and Superposition
-A **qubit** (quantum bit) is the fundamental unit of quantum information. Unlike classical bits, which can be either \(0\) or \(1\), a qubit exists in a **superposition** of both states:
+A **qubit** (quantum bit) is the fundamental unit of quantum information. Unlike classical bits, which can be either $0$ or $1$, a qubit exists in a **superposition** of both states:
 
 ```math
 |\psi\rangle = \alpha |0\rangle + \beta |1\rangle,
