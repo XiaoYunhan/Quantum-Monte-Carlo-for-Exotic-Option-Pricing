@@ -27,10 +27,25 @@
       - [Uncertainty Model](#uncertainty-model)
       - [Payoff Function Implementation](#payoff-function-implementation)
       - [Quantum Circuit Example](#quantum-circuit-example)
-    - [Quantum Monte Carlo for Digital Pricing](#quantum-monte-carlo-for-digital-pricing)
+    - [Quantum Monte Carlo for Digital Option Pricing](#quantum-monte-carlo-for-digital-option-pricing)
+      - [Quantum Encoding of Uncertainty for Digital Options](#quantum-encoding-of-uncertainty-for-digital-options)
+      - [Quantum Circuit for Digital Payoff Evaluation](#quantum-circuit-for-digital-payoff-evaluation)
+      - [Controlled Quantum Rotations and Payoff Encoding](#controlled-quantum-rotations-and-payoff-encoding)
+      - [Practical Quantum Implementation Example (Qiskit)](#practical-quantum-implementation-example-qiskit-1)
+      - [Differences from Asian and European Options](#differences-from-asian-and-european-options)
   - [Other Quantum Approaches for Exotic Option Pricing](#other-quantum-approaches-for-exotic-option-pricing)
-    - [Option Pricing with qGANs](#option-pricing-with-qgans)
+    - [Option Pricing with Quantum Generative Adversarial Networks (qGANs)](#option-pricing-with-quantum-generative-adversarial-networks-qgans)
+      - [Quantum Representation of Uncertainty with qGANs](#quantum-representation-of-uncertainty-with-qgans)
+      - [Quantum Circuit Construction for Uncertainty Modeling](#quantum-circuit-construction-for-uncertainty-modeling)
+      - [Option Pricing Using qGAN-Based Quantum Circuits](#option-pricing-using-qgan-based-quantum-circuits)
+      - [Practical Considerations and Advantages](#practical-considerations-and-advantages)
   - [Future Improvement](#future-improvement)
+  - [Execute a Quantum Monte Carlo Simulation](#execute-a-quantum-monte-carlo-simulation)
+    - [Frameworks](#frameworks)
+      - [IBM Qiskit](#ibm-qiskit)
+      - [MATLAB](#matlab)
+    - [Limitations](#limitations)
+      - [Compilation](#compilation)
   - [Appendix](#appendix)
     - [Appendix A: Fundamentals of Quantum Computing for Option Pricing](#appendix-a-fundamentals-of-quantum-computing-for-option-pricing)
       - [1. Qubits and Superposition](#1-qubits-and-superposition)
@@ -139,7 +154,7 @@ S_{avg} = \frac{1}{n} \sum_{t=1}^{n} S_t.
   The option payoff is then $f(S_{avg})$ instead of $f(S_T)$.
 - **American options** require estimating early exercise value at each time step, often using Least Squares Monte Carlo (LSMC).
 
-Monte Carlo provides a general, flexible framework for pricing such options, though its slow convergence motivates the need for **Quantum Monte Carlo (QMC)**, which we discuss next.
+Monte Carlo provides a general, flexible framework for pricing such options, though its slow convergence motivates the need for **Quantum Monte Carlo**, which we discuss next.
 
 ## Quantum Monte Carlo
 
@@ -148,7 +163,7 @@ Monte Carlo provides a general, flexible framework for pricing such options, tho
 
 ### Quantum Monte Carlo for European Option Pricing
 
-Quantum Monte Carlo (QMC) techniques offer a powerful alternative to classical Monte Carlo methods for pricing European call options. Consider a European call option characterized by a strike price $K$ and an underlying asset whose maturity spot price $S_T$ follows a probability distribution resulting from a Brownian motion $W_T$. The payoff at maturity is:
+Quantum Monte Carlo techniques offer a powerful alternative to classical Monte Carlo methods for pricing European call options. Consider a European call option characterized by a strike price $K$ and an underlying asset whose maturity spot price $S_T$ follows a probability distribution resulting from a Brownian motion $W_T$. The payoff at maturity is:
 
 ```math
 \max\{S_T - K, 0\}
@@ -392,7 +407,7 @@ This conceptual framework connects explicitly to theoretical processes described
 
 ### Quantum Monte Carlo for Barrier Options Pricing
 
-In this section, we apply Quantum Monte Carlo (QMC) techniques specifically to barrier basket options, characterized by a payoff function of the form:
+In this section, we apply Quantum Monte Carlo techniques specifically to barrier basket options, characterized by a payoff function of the form:
 
 ```math
 \max\{S_T^1 + S_T^2 - K, 0\}
@@ -473,17 +488,198 @@ qc.draw(output='mpl')
 
 This illustrative example highlights the critical conditional logic distinguishing basket barrier options from other exotic types, capturing threshold conditions and linearly scaled payoffs within the quantum Monte Carlo framework.
 
-### Quantum Monte Carlo for Digital Pricing
+### Quantum Monte Carlo for Digital Option Pricing
+
+Quantum Monte Carlo methods also apply effectively to digital (binary) options, whose payoff structure differs significantly from standard European or Asian options. A digital call option pays a fixed amount if the underlying asset price exceeds a predetermined strike price at maturity and pays nothing otherwise. Formally, the payoff is defined as:
+
+```math
+f(S_T) = \begin{cases}
+Q, & S_T \geq K, \\
+0, & \text{otherwise},
+\end{cases}
+```
+
+where $Q$ is the fixed payoff amount, $K$ the strike price, and $S_T$ the underlying asset price at maturity.
+
+#### Quantum Encoding of Uncertainty for Digital Options
+
+Similar to European options, digital options require encoding the uncertainty of the asset price at maturity into quantum states. This process involves discretizing the underlying asset's probability distribution—typically assumed log-normal due to Brownian motion—across a finite quantum state representation:
+
+```math
+|\psi\rangle = \sum_{j=0}^{2^n-1}\sqrt{p_j}|j\rangle,
+```
+
+where each state $|j\rangle$ corresponds to a discrete price level obtained through the affine mapping:
+
+```math
+j \mapsto \frac{\text{high} - \text{low}}{2^n - 1} j + \text{low},
+```
+
+ensuring accurate representation of the asset price distribution at maturity.
+
+#### Quantum Circuit for Digital Payoff Evaluation
+
+Evaluating a digital option payoff involves a simpler logical operation compared to continuous payoff functions such as European or Asian options. The payoff is binary, contingent solely on the condition $ S_T \ge K $. A quantum comparator circuit is thus central to digital option evaluation:
+
+- The comparator checks the quantum register encoding $ S_T $ against the strike price $K$.
+- An ancilla qubit is set to $|1\rangle$ if $ S_T \ge K $ and remains $|0\rangle$ otherwise.
+
+Formally, this quantum operation can be represented as:
+
+```math
+|j\rangle |0\rangle \mapsto |j\rangle |f_{\text{digital}}(j)\rangle,
+```
+
+where $ f_{\text{digital}}(j) $ is defined as:
+
+```math
+f_{\text{digital}}(j) = \begin{cases}
+1, & \text{if } S_{T}(j) \geq K, \\
+0, & \text{otherwise}.
+\end{cases}
+```
+
+#### Controlled Quantum Rotations and Payoff Encoding
+
+To implement amplitude estimation for digital options, we apply a controlled rotation conditioned by the comparator outcome. The quantum state becomes:
+
+```math
+|\chi\rangle = \sum_{j=0}^{2^n-1}\sqrt{p_j}|j\rangle \left(\sqrt{1 - f_{\text{digital}}(j)}|0\rangle + \sqrt{f_{\text{digital}}(j)}|1\rangle\right).
+```
+
+Measuring the ancilla qubit in state $|1\rangle$ directly yields the probability $\mathbb{P}(S_T \ge K)$, from which the payoff expectation $Q\cdot\mathbb{P}(S_T \ge K)$ is derived.
+
+#### Practical Quantum Implementation Example (Qiskit)
+
+Below is a simplified Qiskit-based conceptual outline of the quantum circuit for pricing digital options:
+
+```python
+from qiskit import QuantumCircuit, QuantumRegister, AncillaRegister
+from qiskit.circuit.library import IntegerComparator
+
+# Parameters
+num_uncertainty_qubits = 3
+low, high, strike_price = 1.0, 3.0, 2.0
+
+# Quantum Registers
+qr_price = QuantumRegister(num_uncertainty_qubits, 'price')
+ancilla_compare = AncillaRegister(1, 'ancilla_compare')
+qc = QuantumCircuit(qr_price, ancilla_compare)
+
+# Encode uncertainty distribution (prepared externally via Grover-Rudolph)
+
+# Quantum Comparator
+comparator = IntegerComparator(num_uncertainty_qubits, 
+                               int((strike_price - low) / (high - low) * (2**num_uncertainty_qubits - 1)),
+                               geq=True)
+qc.append(comparator, qr_price[:] + ancilla_compare[:])
+
+# Controlled rotation to encode digital payoff (simplified)
+# No rotation needed, directly amplitude estimate ancilla_compare
+
+# Apply amplitude estimation
+
+# Evaluate the circuit
+```
+
+#### Differences from Asian and European Options
+
+Digital options differ fundamentally from European and Asian options due to their discrete, binary payoff nature. Thus, the quantum implementation requires fewer arithmetic operations and no complex payoff approximations or rotations beyond the comparator check. This simplification allows digital options to be priced with lower quantum circuit depth and fewer ancillary resources compared to Asian options, highlighting the practical efficiency of Quantum Monte Carlo techniques for such binary payoffs.
 
 ## Other Quantum Approaches for Exotic Option Pricing
 
-### Option Pricing with qGANs
+### Option Pricing with Quantum Generative Adversarial Networks (qGANs)
 
-[1] Quantum Generative Adversarial Networks for Learning and Loading Random Distributions. Zoufal, C., Lucchi, A., & Woerner, S. (2019). https://www.nature.com/articles/s41534-019-0223-2
+Having discussed the Quantum Monte Carlo (QMC) methods extensively for various exotic option types, we now shift our focus towards leveraging Quantum Generative Adversarial Networks (qGANs) as an alternative quantum computational method for option pricing. Unlike direct probabilistic modeling via amplitude estimation in QMC, qGAN-based approaches employ generative modeling to accurately represent the underlying uncertainty distributions.
 
+#### Quantum Representation of Uncertainty with qGANs
 
+In classical finance, the Black-Scholes-Merton (BSM) model commonly assumes a log-normal distribution for the underlying asset price at maturity. This assumption remains consistent in quantum frameworks. However, instead of explicitly discretizing distributions as previously shown, a qGAN provides a powerful quantum method to learn and represent these distributions directly from sample data. Formally, the qGAN-generated quantum state can be described by:
+
+```math
+|g_{\theta}\rangle = \sum_{j=0}^{2^n-1}\sqrt{p_{\theta}^{j}}|j\rangle,
+```
+
+where $p_{\theta}^{j}$ are probabilities approximating the target distribution, parameterized by $\theta$.
+
+A qGAN model is trained classically to match a given target distribution—typically a log-normal distribution consistent with the Black-Scholes assumption—before encoding it as a quantum circuit. This quantum circuit subsequently serves as the uncertainty model for pricing options.
+
+#### Quantum Circuit Construction for Uncertainty Modeling
+
+In practice, a trained qGAN generates a variational quantum circuit that encodes the learned distribution into quantum states. The circuit typically involves initializing a quantum state with an approximate distribution and refining it through a variational ansatz, as illustrated below:
+
+```python
+# Parameters
+bounds = np.array([0.0, 7.0])
+num_qubits = 3
+g_params = [0.29399714, 0.38853322, 0.9557694, 0.07245791, 6.02626428, 0.13537225]
+
+# Initial state approximating the log-normal distribution
+init_dist = NormalDistribution(num_qubits, mu=1.0, sigma=1.0, bounds=bounds)
+
+# Variational form (qGAN ansatz)
+var_form = TwoLocal(num_qubits, "ry", "cz", entanglement="circular", reps=1)
+theta = var_form.ordered_parameters
+
+# Final quantum uncertainty model (trained qGAN)
+g_circuit = init_dist.compose(var_form)
+uncertainty_model = g_circuit.assign_parameters(dict(zip(theta, g_params)))
+```
+
+#### Option Pricing Using qGAN-Based Quantum Circuits
+
+After constructing the uncertainty model, we employ quantum amplitude estimation methods to evaluate the expected payoff. For instance, to price a European call option with strike price $K$, we first define a payoff function within the quantum framework, scaling it as necessary for quantum computation:
+
+```python
+# Option parameters
+strike_price = 2
+c_approx = 0.25
+
+# Define payoff evaluation circuit
+european_call_pricing = EuropeanCallPricing(
+    num_qubits,
+    strike_price=strike_price,
+    rescaling_factor=c_approx,
+    bounds=bounds,
+    uncertainty_model=uncertainty_model,
+)
+
+# Amplitude estimation setup
+epsilon = 0.01
+alpha = 0.05
+problem = european_call_pricing.to_estimation_problem()
+
+# Perform iterative amplitude estimation
+ae = IterativeAmplitudeEstimation(
+    epsilon_target=epsilon,
+    alpha=alpha,
+    sampler=Sampler(run_options={"shots": 100, "seed": 75})
+)
+result = ae.estimate(problem)
+```
+
+The amplitude estimation procedure yields an estimate of the option’s fair price along with a confidence interval.
+
+#### Practical Considerations and Advantages
+
+Employing qGANs for option pricing offers significant practical advantages, notably:
+- **Data-driven modeling**: The qGAN approach inherently adapts to empirical data, providing flexibility beyond the classical parametric assumptions.
+- **Quantum efficiency**: Once trained, the quantum representation allows efficient sampling and estimation through quantum amplitude estimation.
+- **Potential scalability**: Quantum circuits trained with qGANs could offer computational advantages as quantum hardware continues to improve, potentially scaling better than classical Monte Carlo methods.
+
+In contrast to the previously discussed Quantum Monte Carlo methods, qGANs provide an effective hybrid classical-quantum approach, blending classical machine learning with quantum computing techniques to offer a promising pathway for advanced financial modeling and option pricing.
 
 ## Future Improvement
+
+## Execute a Quantum Monte Carlo Simulation
+
+### Frameworks
+#### IBM Qiskit
+
+#### MATLAB
+
+### Limitations
+#### Compilation
 
 ## Appendix
 
@@ -552,7 +748,7 @@ can be transformed into Fourier space using QFT, allowing efficient numerical so
 
 #### 5. Quantum Algorithms for Option Pricing
 Several quantum algorithms can accelerate option pricing calculations:
-- **Quantum Monte Carlo (QMC):** Utilizes QAE to speed up simulations of stochastic processes like geometric Brownian motion, where the stock price follows:
+- **Quantum Monte Carlo:** Utilizes QAE to speed up simulations of stochastic processes like geometric Brownian motion, where the stock price follows:
 
   ```math
   dS_t = \mu S_t dt + \sigma S_t dW_t.
@@ -719,6 +915,7 @@ This appendix provides a structured representation of quantum arithmetic circuit
 - Iterative Quantum Amplitude Estimation. Grinko, D., Gacon, J., Zoufal, C., & Woerner, S. (2019). https://arxiv.org/abs/1912.05559
 - Amplitude Estimation without Phase Estimation. Suzuki, Y., Uno, S., Raymond, R., Tanaka, T., Onodera, T., & Yamamoto, N. (2019). https://arxiv.org/abs/1904.10246
 - Faster Amplitude Estimation. K. Nakaji (2020). https://arxiv.org/pdf/2003.02417.pdf
+- Quantum Generative Adversarial Networks for Learning and Loading Random Distributions. Zoufal, C., Lucchi, A., & Woerner, S. (2019). https://www.nature.com/articles/s41534-019-0223-2
 
 ### Official Document
 - https://qiskit-community.github.io/qiskit-finance/tutorials/03_european_call_option_pricing.html
