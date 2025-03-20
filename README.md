@@ -10,6 +10,13 @@
     - [Monte Carlo for Exotic Options](#monte-carlo-for-exotic-options)
   - [Quantum Monte Carlo](#quantum-monte-carlo)
     - [Quantum Amplitude Estimation](#quantum-amplitude-estimation)
+      - [Mathematical Formulation](#mathematical-formulation)
+      - [Quantum Amplitude Estimation Algorithm](#quantum-amplitude-estimation-algorithm)
+      - [Rigorous Error Bound and Complexity](#rigorous-error-bound-and-complexity)
+      - [Mean Estimation for Bounded Functions](#mean-estimation-for-bounded-functions)
+      - [Mean Estimation with Bounded Variance](#mean-estimation-with-bounded-variance)
+      - [Application in Option Pricing](#application-in-option-pricing)
+      - [Practical Considerations and Implementations](#practical-considerations-and-implementations)
     - [Quantum Monte Carlo for European Option Pricing](#quantum-monte-carlo-for-european-option-pricing)
       - [Quantum Encoding of Uncertainty](#quantum-encoding-of-uncertainty)
       - [Quantum Payoff Approximation and Qubit Management](#quantum-payoff-approximation-and-qubit-management)
@@ -39,13 +46,16 @@
       - [Quantum Circuit Construction for Uncertainty Modeling](#quantum-circuit-construction-for-uncertainty-modeling)
       - [Option Pricing Using qGAN-Based Quantum Circuits](#option-pricing-using-qgan-based-quantum-circuits)
       - [Practical Considerations and Advantages](#practical-considerations-and-advantages)
-  - [Future Improvement](#future-improvement)
   - [Execute a Quantum Monte Carlo Simulation](#execute-a-quantum-monte-carlo-simulation)
     - [Frameworks](#frameworks)
       - [IBM Qiskit](#ibm-qiskit)
       - [MATLAB](#matlab)
+        - [Example: Computing the Mean of a Function Using QMC in MATLAB](#example-computing-the-mean-of-a-function-using-qmc-in-matlab)
+        - [Comparison with Qiskit](#comparison-with-qiskit)
     - [Limitations](#limitations)
       - [Compilation](#compilation)
+  - [Future Improvements](#future-improvements)
+  - [Conclusion](#conclusion)
   - [Appendix](#appendix)
     - [Appendix A: Fundamentals of Quantum Computing for Option Pricing](#appendix-a-fundamentals-of-quantum-computing-for-option-pricing)
       - [1. Qubits and Superposition](#1-qubits-and-superposition)
@@ -158,8 +168,99 @@ Monte Carlo provides a general, flexible framework for pricing such options, tho
 
 ## Quantum Monte Carlo
 
+Quantum Monte Carlo methods have emerged as a promising computational framework in quantitative finance, particularly for pricing exotic options whose payoff structures often entail intricate path-dependent conditions or multi-dimensional asset interactions. These quantum algorithms leverage the intrinsic parallelism of quantum states to efficiently sample from complex probability distributions, significantly enhancing calculation speed compared to classical Monte Carlo simulations, whose computational cost grows as $\mathcal{O}(1/\epsilon^2)$ for accuracy $\epsilon$. Central to this quantum advantage is Quantum Amplitude Estimation, a technique rigorously providing quadratic speedups by reducing computational complexity to $\mathcal{O}(1/\epsilon)$, thus enabling precise and efficient evaluations of expectations essential to option pricing.
 
 ### Quantum Amplitude Estimation
+
+Quantum Amplitude Estimation, first introduced by Brassard, Høyer, Mosca, and Tapp, is a cornerstone quantum algorithm that efficiently estimates amplitudes of quantum states. In financial modeling, particularly option pricing, QAE significantly reduces computational complexity, offering quadratic speedups compared to classical Monte Carlo methods.
+
+#### Mathematical Formulation
+
+Consider a quantum operator $\mathcal{A}$ that prepares a quantum state:
+
+```math
+|\psi\rangle = \mathcal{A}|0\rangle_n = \sqrt{1 - a}\,|\psi_0\rangle|0\rangle + \sqrt{a}\,|\psi_1\rangle|1\rangle,
+```
+
+where $|\psi_0\rangle$ and $|\psi_1\rangle$ are normalized quantum states, and the amplitude of interest $a$ is given by:
+
+```math
+a = \langle\psi|(\mathcal{I}\otimes|1\rangle\langle1|)|\psi\rangle.
+```
+
+The goal of QAE is to estimate the amplitude $a$ accurately and efficiently.
+
+#### Quantum Amplitude Estimation Algorithm
+
+Quantum Amplitude Estimation employs Quantum Phase Estimation (QPE) combined with a Grover-like operator to estimate the amplitude. Specifically, define the Grover operator $\mathcal{Q}$ associated with $\mathcal{A}$:
+
+```math
+\mathcal{Q} = \mathcal{A}(\mathcal{I} - 2|0\rangle_n\langle0|_n)\mathcal{A}^{\dagger}(\mathcal{I} - 2|\psi_1\rangle|1\rangle\langle\psi_1|\langle1|).
+```
+
+Applying QPE to $\mathcal{Q}$ reveals eigenvalues of the form:
+
+```math
+e^{\pm 2i\theta}, \quad \text{where} \quad \theta = \arcsin(\sqrt{a}).
+```
+
+The amplitude $a$ is then extracted from the estimate $\theta$ through:
+
+```math
+a = \sin^2(\theta).
+```
+
+#### Rigorous Error Bound and Complexity
+
+Theoretical bounds guarantee QAE’s accuracy and efficiency. Formally, given $t$ iterations, QAE outputs an estimate $\hat{a}$ satisfying:
+
+```math
+|\hat{a} - a| \leq 2\pi\frac{\sqrt{a(1 - a)}}{t} + \frac{\pi^2}{t^2},
+```
+
+with a success probability of at least $8/\pi^2$. This result highlights QAE’s quadratic speed-up compared to classical methods, as it achieves an error $\epsilon$ using $\mathcal{O}(1/\epsilon)$ quantum operations, in contrast to the classical Monte Carlo error scaling of $\mathcal{O}(1/\sqrt{N})$.
+
+#### Mean Estimation for Bounded Functions
+
+Quantum amplitude estimation can also estimate expectation values of bounded random variables. Consider a quantum circuit $\mathcal{A}$ acting on $n$ qubits that encodes a random variable $v(\mathcal{A})$ bounded in $[0,1]$. Define the quantum operator $\mathcal{R}$ such that:
+
+```math
+\mathcal{R}|x\rangle|0\rangle = |x\rangle\left(\sqrt{1 - v(x)}|0\rangle - \sqrt{v(x)}|1\rangle\right).
+```
+
+Applying QAE to the state $|\chi\rangle = \mathcal{R}(\mathcal{A}\otimes\mathcal{I})|0\rangle^{n+1}$ yields an estimate $\hat{\mu}$ of $\mathbb{E}[v(\mathcal{A})]$ satisfying:
+
+```math
+|\hat{\mu} - \mathbb{E}[v(\mathcal{A})]| \leq C\left(\frac{\sqrt{\mathbb{E}[v(\mathcal{A})]}}{t} + \frac{1}{t^2}\right),
+```
+
+with probability at least $1 - \delta$, and $C$ being a universal constant.
+
+#### Mean Estimation with Bounded Variance
+
+For random variables with bounded variance $\lambda^2$, QAE still achieves significant improvements. Specifically, to achieve accuracy $\epsilon$ with high probability, QAE requires:
+
+```math
+\mathcal{O}\left(\frac{\lambda}{\epsilon}\log^{3/2}\left(\frac{\lambda}{\epsilon}\right)\log\log\left(\frac{\lambda}{\epsilon}\right)\right)
+```
+
+quantum samples, compared to classical requirements scaling quadratically worse.
+
+#### Application in Option Pricing
+
+In financial option pricing, the amplitude $a$ typically corresponds to the normalized expected payoff:
+
+```math
+a = \mathbb{E}[f(S_T)] = \sum_j p_j f(S_{T,j}),
+```
+
+where $p_j$ represents probabilities, and $f(S_{T,j})$ denotes payoffs at discretized asset prices $S_{T,j}$. QAE efficiently and accurately evaluates these expectations.
+
+#### Practical Considerations and Implementations
+
+Recent improvements, including Iterative Amplitude Estimation (IAE), have enhanced QAE's practical feasibility, making it more robust against limitations of current quantum hardware. Platforms such as Qiskit have successfully demonstrated these methods, enabling their adoption in financial modeling applications.
+
+In summary, Quantum Amplitude Estimation provides a mathematically rigorous, efficient, and practical quantum algorithmic framework crucial for advancing computational finance and derivative pricing.
 
 ### Quantum Monte Carlo for European Option Pricing
 
@@ -590,7 +691,7 @@ Digital options differ fundamentally from European and Asian options due to thei
 
 ### Option Pricing with Quantum Generative Adversarial Networks (qGANs)
 
-Having discussed the Quantum Monte Carlo (QMC) methods extensively for various exotic option types, we now shift our focus towards leveraging Quantum Generative Adversarial Networks (qGANs) as an alternative quantum computational method for option pricing. Unlike direct probabilistic modeling via amplitude estimation in QMC, qGAN-based approaches employ generative modeling to accurately represent the underlying uncertainty distributions.
+Having discussed the Quantum Monte Carlo methods extensively for various exotic option types, we now shift our focus towards leveraging Quantum Generative Adversarial Networks (qGANs) as an alternative quantum computational method for option pricing. Unlike direct probabilistic modeling via amplitude estimation in QMC, qGAN-based approaches employ generative modeling to accurately represent the underlying uncertainty distributions.
 
 #### Quantum Representation of Uncertainty with qGANs
 
@@ -669,17 +770,83 @@ Employing qGANs for option pricing offers significant practical advantages, nota
 
 In contrast to the previously discussed Quantum Monte Carlo methods, qGANs provide an effective hybrid classical-quantum approach, blending classical machine learning with quantum computing techniques to offer a promising pathway for advanced financial modeling and option pricing.
 
-## Future Improvement
-
 ## Execute a Quantum Monte Carlo Simulation
 
+While previous discussions have addressed quantum algorithms such as Quantum Amplitude Estimation under idealized conditions, practical execution of Quantum Monte Carlo simulations on real quantum hardware involves additional complexities. These complexities arise from hardware constraints, noise management, and practical software considerations. A critical step in executing quantum algorithms practically is quantum circuit compilation, a process that optimizes quantum circuits according to the constraints of actual quantum hardware.
+
 ### Frameworks
+
+To perform practical quantum computations, several software frameworks facilitate algorithm design, simulation, and execution on quantum processors. Two prominent platforms are IBM Qiskit and MATLAB.
+
 #### IBM Qiskit
+
+IBM Qiskit is an open-source software development kit designed to provide tools for quantum computing research, development, and practical experimentation. Qiskit enables users to build, simulate, and execute quantum circuits on quantum simulators and real quantum hardware provided through IBM Quantum Experience. Additionally, Qiskit offers specialized modules, such as Qiskit Finance, tailored specifically for financial applications, including option pricing, portfolio optimization, and risk analysis. Its modular structure includes essential components like Terra for circuit construction and optimization, Aer for high-performance simulation, and various application-specific libraries, making it highly versatile for quantum algorithm research and implementation.
 
 #### MATLAB
 
+MATLAB offers a robust environment for implementing Quantum Monte Carlo simulations, leveraging its extensive numerical computation and visualization capabilities. The MATLAB Support Package for Quantum Computing provides tools to design and simulate quantum algorithms, making it accessible for both educational and research purposes.
+
+##### Example: Computing the Mean of a Function Using QMC in MATLAB
+
+Consider the problem of estimating the expected value of the function $f(x) = \sin^2(x)$, where $x$ is a normally distributed random variable. The analytical mean is given by $\mathbb{E}[f(x)] = \sinh(1)/e \approx 0.4323$. Using MATLAB, we can approximate this mean via Quantum Monte Carlo simulation as follows:
+
+```matlab
+% Define the function
+func = @(x) sin(x).^2;
+
+% Number of qubits for probability distribution and estimation
+m = 5;  % Number of probability qubits
+n = 6;  % Number of estimation qubits
+
+% Discretize the probability distribution
+x_max = pi;
+x = linspace(-x_max, x_max, 2^m)';
+p = normpdf(x);
+p = p ./ sum(p);
+
+% Initialize the quantum circuit
+probQubits = 1:m;
+A = initGate(probQubits, sqrt(p));
+A.Name = 'Ainit';
+
+% Define the value qubit and encode the function
+valQubit = m + 1;
+fQubit = m + 2;
+U_f = @(x) [cos(x), -sin(x); sin(x), cos(x)];
+UfGate = gateExpand(U_f, [valQubit, fQubit], m + 2);
+
+% Construct the full quantum circuit
+QCircuit = A * UfGate;
+
+% Perform Quantum Phase Estimation
+QPE = qpeGate(QCircuit, n);
+result = simulate(QPE);
+
+% Extract the estimated mean
+QMCMean = result.PhaseEstimates;
+disp(QMCMean);
+```
+
+This script sets up a quantum circuit to estimate the mean of the function $\sin^2(x)$ using QMC methods. It initializes the probability distribution on a set of qubits, encodes the function values, and employs Quantum Phase Estimation to determine the expected value.
+
+##### Comparison with Qiskit
+
+While MATLAB focuses on simulating quantum algorithms using classical computation, Qiskit enables users to design, simulate, and execute quantum circuits on actual quantum hardware provided by IBM Quantum Experience. Qiskit's modular structure includes components like Terra for circuit construction, Aer for simulation, and application-specific libraries such as Qiskit Finance for financial modeling tasks. This integration facilitates the development and testing of quantum algorithms in a real quantum computing environment, offering a more direct pathway to hardware implementation compared to MATLAB's simulation-centric approach.
+
 ### Limitations
+
+Despite advances in quantum technology, significant limitations remain when executing quantum algorithms in practice, primarily arising from hardware constraints, quantum noise, decoherence, and gate errors.
+
 #### Compilation
+
+Quantum circuit compilation transforms abstract quantum algorithms into executable instructions optimized for specific quantum hardware. Compilation involves multiple steps, including qubit mapping, gate decomposition, and error mitigation. The compiled circuits are tailored to hardware specifics—such as connectivity, gate fidelity, and coherence times—ensuring that execution adheres to hardware constraints. However, the compilation process may introduce overhead and deviations from ideal theoretical performance, making the quality of the compilation step crucial to obtaining reliable results from Quantum Monte Carlo simulations.
+
+## Future Improvements
+
+The ongoing evolution of quantum computing holds promising avenues for significant enhancements in exotic option pricing using Quantum Monte Carlo methods. Improvements in quantum hardware, particularly advancements in qubit coherence times, gate fidelities, and scalable architectures, are essential to realizing the full potential of quantum algorithms in finance. Furthermore, continuous research into quantum error correction and error mitigation techniques will enable more accurate and robust quantum computations. Additional exploration of innovative quantum approaches, such as quantum generative adversarial networks (qGANs) and other sophisticated quantum machine learning models, will further refine the representation of financial uncertainty. Integration of these advancements with classical computing paradigms will ultimately lead to more efficient and practical hybrid quantum-classical computational frameworks for financial markets.
+
+## Conclusion
+Quantum Monte Carlo methods represent a transformative development for computational finance, offering substantial computational advantages in pricing complex, path-dependent exotic options compared to classical approaches. Central to this quantum advantage is the efficient calculation of expectations via Quantum Amplitude Estimation and innovative quantum algorithms tailored specifically for financial instruments such as European, Asian, Barrier, and Digital options. While practical challenges remain significant, ongoing research and technological progress continue to address these limitations, gradually moving quantum computing from theoretical potential to practical reality. The continued intersection of quantum computing and financial engineering promises not only faster and more accurate pricing models but also novel methodologies that could revolutionize the broader financial industry.
 
 ## Appendix
 
@@ -918,8 +1085,8 @@ This appendix provides a structured representation of quantum arithmetic circuit
 - Quantum Generative Adversarial Networks for Learning and Loading Random Distributions. Zoufal, C., Lucchi, A., & Woerner, S. (2019). https://www.nature.com/articles/s41534-019-0223-2
 
 ### Official Document
-- https://qiskit-community.github.io/qiskit-finance/tutorials/03_european_call_option_pricing.html
-- https://qiskit-community.github.io/qiskit-finance/tutorials/10_qgan_option_pricing.html
+- https://qiskit-community.github.io/qiskit-finance/tutorials/index.html
+- https://www.mathworks.com/help/matlab/math/quantum-monte-carlo-simulation.html
 
 ### GitHub
 - https://github.com/Qiskit/qiskit
