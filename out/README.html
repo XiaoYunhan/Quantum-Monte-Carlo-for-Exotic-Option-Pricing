@@ -140,9 +140,21 @@
         </head>
         <body class="vscode-body vscode-light">
             <h1 id="quantum-monte-carlo-for-exotic-option-pricing">Quantum Monte Carlo for Exotic Option Pricing</h1>
+<p><em>A research report by</em></p>
+<p align="center">
+  <b><font size="3">Xiao Yunhan</font></b>
+  <br>
+  Master of Financial Engineering, National University of Singapore  
+  <br>
+  <font size="2">A0177340H</font>
+</p>
+<h2 id="abstract">Abstract</h2>
+<p>This paper investigates the application of quantum computing techniques to the pricing of exotic financial derivatives, focusing on the use of Quantum Amplitude Estimation (QAE) to accelerate Monte Carlo simulations. While classical Monte Carlo methods remain a standard approach in derivative pricing, their convergence rate of <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="script">O</mi><mo stretchy="false">(</mo><msup><mi>k</mi><mrow><mo>−</mo><mn>1</mn><mi mathvariant="normal">/</mi><mn>2</mn></mrow></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathcal{O}(k^{-1/2})</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.138em;vertical-align:-0.25em;"></span><span class="mord mathcal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.888em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">1/2</span></span></span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span> renders them computationally expensive—particularly for path-dependent options such as Asian, barrier, and digital options. We review the classical framework, incorporating both standard and advanced stochastic models (e.g., GBM, Merton jump-diffusion, and Heston), and evaluate the effectiveness of variance reduction techniques. Empirical results show consistent option price estimates across models, with variance reduction significantly improving statistical efficiency. We then implement QAE within a Quantum Monte Carlo setting and detail its theoretical foundations, algorithmic structure, and error bounds. Our analysis confirms that QAE achieves a quadratic speedup in expectation estimation, reducing the required number of simulations to achieve a given accuracy. We also explore practical considerations, including bounded function encoding and hardware-aware adaptations such as Iterative Amplitude Estimation. The findings suggest that quantum-enhanced Monte Carlo methods offer a viable and potentially transformative tool for pricing complex derivatives, with implications for future research in quantum finance and scalable financial computation.</p>
+<hr>
 <ul>
 <li><a href="#quantum-monte-carlo-for-exotic-option-pricing">Quantum Monte Carlo for Exotic Option Pricing</a>
 <ul>
+<li><a href="#abstract">Abstract</a></li>
 <li><a href="#introduction">Introduction</a></li>
 <li><a href="#classical-monte-carlo">Classical Monte Carlo</a>
 <ul>
@@ -1193,49 +1205,45 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
 <h4 id="2-basic-arithmetic-operations-in-quantum-computing">2. Basic Arithmetic Operations in Quantum Computing</h4>
 <p>Various arithmetic operations can be implemented using fundamental quantum gates:</p>
 <ol>
-<li>
-<p><strong>SUM Gate</strong>: Implements controlled addition:</p>
-<pre><code>1 ────────────────●──
-2 ────────────────●──
-3 ────────⊕──⊕───────
-</code></pre>
-</li>
-<li>
-<p><strong>Carry (CY) Gate</strong>: Represents the carry operation in arithmetic calculations:</p>
-<pre><code>1 ────────────────●──────
-2 ────────────────●──────
-3 ────────⊕──⊕───────⊕───
-4 ────────────────●──────
-</code></pre>
-</li>
+<li><strong>SUM Gate</strong>: Implements controlled addition:</li>
 </ol>
+<!-- ![sum](plot/circuit/sum.png) -->
+<div style="text-align: center;">
+  <img src="file:////Users/xiaoyunhan/Desktop/NUS/Semester 6/FE5110/Quantum-Monte-Carlo-for-Exotic-Option-Pricing/plot/circuit/sum.png" alt="sum" width="300"/>
+</div>
+<ol start="2">
+<li><strong>Carry (CY) Gate</strong>: Represents the carry operation in arithmetic calculations:</li>
+</ol>
+<div style="text-align: center;">
+  <img src="file:////Users/xiaoyunhan/Desktop/NUS/Semester 6/FE5110/Quantum-Monte-Carlo-for-Exotic-Option-Pricing/plot/circuit/cy.png" alt="cy" width="300"/>
+</div>
 <p>These gates serve as building blocks for more complex operations, including addition, multiplication, and exponentiation.</p>
 <h4 id="3-addition-circuit">3. Addition Circuit</h4>
 <p>A quantum circuit for addition modulo <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span> is defined as:</p>
-<pre><code>   |a⟩ ─────── ADD ─────── |a⟩
-   |b⟩ ─────────────────── |a + b⟩
-</code></pre>
+<div style="text-align: center;">
+  <img src="file:////Users/xiaoyunhan/Desktop/NUS/Semester 6/FE5110/Quantum-Monte-Carlo-for-Exotic-Option-Pricing/plot/circuit/add.png" alt="add" width="300"/>
+</div>
 <p>Similarly, a circuit for addition modulo <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span> is constructed as:</p>
-<pre><code>   |a⟩ ─────── ADD N ───── |a⟩
-   |b⟩ ─────────────────── |a + b \mod N⟩
-</code></pre>
+<div style="text-align: center;">
+  <img src="file:////Users/xiaoyunhan/Desktop/NUS/Semester 6/FE5110/Quantum-Monte-Carlo-for-Exotic-Option-Pricing/plot/circuit/mod.png" alt="mod" width="300"/>
+</div>
 <h4 id="4-multiplication-and-exponentiation-circuits">4. Multiplication and Exponentiation Circuits</h4>
 <p>The multiplication circuit for computing <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>×</mo><mi>x</mi><mspace></mspace><mspace width="0.6667em"/><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">d</mi></mrow><mtext> </mtext><mtext> </mtext><mi>N</mi></mrow><annotation encoding="application/x-tex">a \times x \mod N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">a</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">x</span><span class="mspace allowbreak"></span><span class="mspace" style="margin-right:0.6667em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">mod</span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span> is:</p>
-<pre><code>   |x⟩ ─── MULT(a) N ─── |x⟩
-   |0⟩ ───────────────── |a × x \mod N⟩
-</code></pre>
+<div style="text-align: center;">
+  <img src="file:////Users/xiaoyunhan/Desktop/NUS/Semester 6/FE5110/Quantum-Monte-Carlo-for-Exotic-Option-Pricing/plot/circuit/multi.png" alt="multi" width="300"/>
+</div>
 <p>The exponentiation circuit for computing <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>a</mi><mi>x</mi></msup><mspace></mspace><mspace width="0.6667em"/><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">d</mi></mrow><mtext> </mtext><mtext> </mtext><mi>N</mi></mrow><annotation encoding="application/x-tex">a^x \mod N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6644em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.6644em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">x</span></span></span></span></span></span></span></span><span class="mspace allowbreak"></span><span class="mspace" style="margin-right:0.6667em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">mod</span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span></span></span></span> is:</p>
-<pre><code>   |x⟩ ─── EXP(a) ─── |x⟩
-   |0⟩ ───────────── |a^x \mod N⟩
-</code></pre>
+<div style="text-align: center;">
+  <img src="file:////Users/xiaoyunhan/Desktop/NUS/Semester 6/FE5110/Quantum-Monte-Carlo-for-Exotic-Option-Pricing/plot/circuit/exp.png" alt="exp" width="300"/>
+</div>
 <h4 id="5-quantum-circuit-for-call-option-payoff">5. Quantum Circuit for Call Option Payoff</h4>
 <p>To implement the European call option payoff function:</p>
 <p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mi>a</mi><mo>+</mo></msup><mo>=</mo><mi>max</mi><mo>⁡</mo><mo stretchy="false">{</mo><mn>0</mn><mo separator="true">,</mo><mi>a</mi><mo stretchy="false">}</mo><mo separator="true">,</mo></mrow><annotation encoding="application/x-tex">a^+ = \max\{0, a\},
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8213em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8213em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mbin mtight">+</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop">max</span><span class="mopen">{</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">a</span><span class="mclose">}</span><span class="mpunct">,</span></span></span></span></span></p>
 <p>we design a reversible circuit:</p>
-<pre><code>   |a, s⟩ ─── MAX(0) ─── |a, s⟩
-   |0⟩ ─────────────── |a^+⟩
-</code></pre>
+<div style="text-align: center;">
+  <img src="file:////Users/xiaoyunhan/Desktop/NUS/Semester 6/FE5110/Quantum-Monte-Carlo-for-Exotic-Option-Pricing/plot/circuit/max.png" alt="max" width="300"/>
+</div>
 <p>This circuit uses the sign bit as a control. If the sign bit is positive, controlled addition is performed:</p>
 <p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi mathvariant="normal">∣</mi><mi>a</mi><mo separator="true">,</mo><mi>s</mi><mo separator="true">,</mo><mn>0</mn><mo stretchy="false">⟩</mo><mo>→</mo><mrow><mo fence="true">{</mo><mtable rowspacing="0.36em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mi mathvariant="normal">∣</mi><mi>a</mi><mo separator="true">,</mo><mi>s</mi><mo separator="true">,</mo><mi>a</mi><mo stretchy="false">⟩</mo><mo separator="true">,</mo></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mtext>if </mtext><mi mathvariant="normal">∣</mi><mi>s</mi><mo stretchy="false">⟩</mo><mo>=</mo><mi mathvariant="normal">∣</mi><mn>0</mn><mo stretchy="false">⟩</mo></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mi mathvariant="normal">∣</mi><mi>a</mi><mo separator="true">,</mo><mi>s</mi><mo separator="true">,</mo><mn>0</mn><mo stretchy="false">⟩</mo><mo separator="true">,</mo></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mtext>if </mtext><mi mathvariant="normal">∣</mi><mi>s</mi><mo stretchy="false">⟩</mo><mo>=</mo><mi mathvariant="normal">∣</mi><mn>1</mn><mo stretchy="false">⟩</mo></mrow></mstyle></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">|a, s, 0\rangle \rightarrow
 \begin{cases}
@@ -1245,16 +1253,14 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord mathnormal">a</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">s</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0</span><span class="mclose">⟩</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">→</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:3em;vertical-align:-1.25em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord">∣</span><span class="mord mathnormal">a</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">s</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">a</span><span class="mclose">⟩</span><span class="mpunct">,</span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord">∣</span><span class="mord mathnormal">a</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">s</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0</span><span class="mclose">⟩</span><span class="mpunct">,</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">if </span></span><span class="mord">∣</span><span class="mord mathnormal">s</span><span class="mclose">⟩</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">∣0</span><span class="mclose">⟩</span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">if </span></span><span class="mord">∣</span><span class="mord mathnormal">s</span><span class="mclose">⟩</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">∣1</span><span class="mclose">⟩</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
 <h4 id="6-quantum-circuit-for-european-call-option-pricing">6. Quantum Circuit for European Call Option Pricing</h4>
 <p>A quantum circuit can be constructed to model the payoff of a European call option by mapping Brownian motion to stock price evolution:</p>
-<pre><code>   |x⟩ ─── S(σ, r, t) ─── |x⟩
-   |0⟩ ───────────────── |e^{\sigma x + (r - \sigma^2/2)t}⟩
-</code></pre>
+<div style="text-align: center;">
+  <img src="file:////Users/xiaoyunhan/Desktop/NUS/Semester 6/FE5110/Quantum-Monte-Carlo-for-Exotic-Option-Pricing/plot/circuit/pricing.png" alt="pricing" width="300"/>
+</div>
 <p>Combining this with the max function, the final quantum circuit for the call option payoff is:</p>
-<pre><code>   |x⟩ ─── CALL(K, σ, r, T) ─── |x⟩
-   |0⟩ ─────────────────────── |ṽ_{euro}(x)⟩
-</code></pre>
-<p>where <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover accent="true"><mi>v</mi><mo>~</mo></mover><mrow><mi>e</mi><mi>u</mi><mi>r</mi><mi>o</mi></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">ṽ_{euro}(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.6679em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span></span><span style="top:-3.35em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.2222em;"><span class="mord">~</span></span></span></span></span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">e</span><span class="mord mathnormal mtight">u</span><span class="mord mathnormal mtight">ro</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> represents the bitwise approximation of the payoff function.</p>
-<hr>
-<p>This appendix provides a structured representation of quantum arithmetic circuits, covering integer and real number encoding, fundamental arithmetic operations, and financial applications such as European call option pricing. These circuits form the foundation for quantum algorithms in financial engineering and beyond.</p>
+<div style="text-align: center;">
+  <img src="file:////Users/xiaoyunhan/Desktop/NUS/Semester 6/FE5110/Quantum-Monte-Carlo-for-Exotic-Option-Pricing/plot/circuit/call.png" alt="call" width="300"/>
+</div>
+<p>where <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover accent="true"><mi>v</mi><mo>~</mo></mover><mrow><mi>e</mi><mi>u</mi><mi>r</mi><mi>o</mi></mrow></msub><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\tilde{v}_{euro}(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.6679em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span></span><span style="top:-3.35em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.2222em;"><span class="mord">~</span></span></span></span></span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">e</span><span class="mord mathnormal mtight">u</span><span class="mord mathnormal mtight">ro</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> represents the bitwise approximation of the European call option payoff function.</p>
 <h2 id="reference">Reference</h2>
 <h3 id="research-paper">Research Paper</h3>
 <ul>

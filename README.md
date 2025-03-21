@@ -1,8 +1,22 @@
 # Quantum Monte Carlo for Exotic Option Pricing
 
+_A research report by_  
+<p align="center">
+  <b><font size="3">Xiao Yunhan</font></b>
+  <br>
+  Master of Financial Engineering, National University of Singapore  
+  <br>
+  <font size="2">A0177340H</font>
+</p>
 
+## Abstract
+
+This paper investigates the application of quantum computing techniques to the pricing of exotic financial derivatives, focusing on the use of Quantum Amplitude Estimation (QAE) to accelerate Monte Carlo simulations. While classical Monte Carlo methods remain a standard approach in derivative pricing, their convergence rate of $\mathcal{O}(k^{-1/2})$ renders them computationally expensive—particularly for path-dependent options such as Asian, barrier, and digital options. We review the classical framework, incorporating both standard and advanced stochastic models (e.g., GBM, Merton jump-diffusion, and Heston), and evaluate the effectiveness of variance reduction techniques. Empirical results show consistent option price estimates across models, with variance reduction significantly improving statistical efficiency. We then implement QAE within a Quantum Monte Carlo setting and detail its theoretical foundations, algorithmic structure, and error bounds. Our analysis confirms that QAE achieves a quadratic speedup in expectation estimation, reducing the required number of simulations to achieve a given accuracy. We also explore practical considerations, including bounded function encoding and hardware-aware adaptations such as Iterative Amplitude Estimation. The findings suggest that quantum-enhanced Monte Carlo methods offer a viable and potentially transformative tool for pricing complex derivatives, with implications for future research in quantum finance and scalable financial computation.
+
+---
 
 - [Quantum Monte Carlo for Exotic Option Pricing](#quantum-monte-carlo-for-exotic-option-pricing)
+  - [Abstract](#abstract)
   - [Introduction](#introduction)
   - [Classical Monte Carlo](#classical-monte-carlo)
     - [Monte Carlo Simulation for Option Pricing](#monte-carlo-simulation-for-option-pricing)
