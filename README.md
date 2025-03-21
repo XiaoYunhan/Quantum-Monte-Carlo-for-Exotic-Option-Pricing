@@ -1,5 +1,7 @@
 # Quantum Monte Carlo for Exotic Option Pricing
 
+
+
 - [Quantum Monte Carlo for Exotic Option Pricing](#quantum-monte-carlo-for-exotic-option-pricing)
   - [Introduction](#introduction)
   - [Classical Monte Carlo](#classical-monte-carlo)
@@ -976,55 +978,41 @@ Since $F'$ is reversible, it can be implemented using quantum circuits composed 
 Various arithmetic operations can be implemented using fundamental quantum gates:
 
 1. **SUM Gate**: Implements controlled addition:
-
-   ```
-   1 ────────────────●──
-   2 ────────────────●──
-   3 ────────⊕──⊕───────
-   ```
+<!-- ![sum](plot/circuit/sum.png) -->
+<div style="text-align: center;">
+  <img src="plot/circuit/sum.png" alt="sum" width="300"/>
+</div>
 
 2. **Carry (CY) Gate**: Represents the carry operation in arithmetic calculations:
-
-   ```
-   1 ────────────────●──────
-   2 ────────────────●──────
-   3 ────────⊕──⊕───────⊕───
-   4 ────────────────●──────
-   ```
+<div style="text-align: center;">
+  <img src="plot/circuit/cy.png" alt="cy" width="300"/>
+</div>
 
 These gates serve as building blocks for more complex operations, including addition, multiplication, and exponentiation.
 
 #### 3. Addition Circuit
 
 A quantum circuit for addition modulo $N$ is defined as:
-
-```
-   |a⟩ ─────── ADD ─────── |a⟩
-   |b⟩ ─────────────────── |a + b⟩
-```
+<div style="text-align: center;">
+  <img src="plot/circuit/add.png" alt="add" width="300"/>
+</div>
 
 Similarly, a circuit for addition modulo $N$ is constructed as:
-
-```
-   |a⟩ ─────── ADD N ───── |a⟩
-   |b⟩ ─────────────────── |a + b \mod N⟩
-```
+<div style="text-align: center;">
+  <img src="plot/circuit/mod.png" alt="mod" width="300"/>
+</div>
 
 #### 4. Multiplication and Exponentiation Circuits
 
 The multiplication circuit for computing $a \times x \mod N$ is:
-
-```
-   |x⟩ ─── MULT(a) N ─── |x⟩
-   |0⟩ ───────────────── |a × x \mod N⟩
-```
+<div style="text-align: center;">
+  <img src="plot/circuit/multi.png" alt="multi" width="300"/>
+</div>
 
 The exponentiation circuit for computing $a^x \mod N$ is:
-
-```
-   |x⟩ ─── EXP(a) ─── |x⟩
-   |0⟩ ───────────── |a^x \mod N⟩
-```
+<div style="text-align: center;">
+  <img src="plot/circuit/exp.png" alt="exp" width="300"/>
+</div>
 
 #### 5. Quantum Circuit for Call Option Payoff
 
@@ -1035,11 +1023,9 @@ a^+ = \max\{0, a\},
 ```
 
 we design a reversible circuit:
-
-```
-   |a, s⟩ ─── MAX(0) ─── |a, s⟩
-   |0⟩ ─────────────── |a^+⟩
-```
+<div style="text-align: center;">
+  <img src="plot/circuit/max.png" alt="max" width="300"/>
+</div>
 
 This circuit uses the sign bit as a control. If the sign bit is positive, controlled addition is performed:
 
@@ -1054,24 +1040,16 @@ This circuit uses the sign bit as a control. If the sign bit is positive, contro
 #### 6. Quantum Circuit for European Call Option Pricing
 
 A quantum circuit can be constructed to model the payoff of a European call option by mapping Brownian motion to stock price evolution:
-
-```
-   |x⟩ ─── S(σ, r, t) ─── |x⟩
-   |0⟩ ───────────────── |e^{\sigma x + (r - \sigma^2/2)t}⟩
-```
+<div style="text-align: center;">
+  <img src="plot/circuit/pricing.png" alt="pricing" width="300"/>
+</div>
 
 Combining this with the max function, the final quantum circuit for the call option payoff is:
+<div style="text-align: center;">
+  <img src="plot/circuit/call.png" alt="call" width="300"/>
+</div>
 
-```
-   |x⟩ ─── CALL(K, σ, r, T) ─── |x⟩
-   |0⟩ ─────────────────────── |ṽ_{euro}(x)⟩
-```
-
-where $ṽ_{euro}(x)$ represents the bitwise approximation of the payoff function.
-
----
-
-This appendix provides a structured representation of quantum arithmetic circuits, covering integer and real number encoding, fundamental arithmetic operations, and financial applications such as European call option pricing. These circuits form the foundation for quantum algorithms in financial engineering and beyond.
+where $\tilde{v}_{euro}(x)$ represents the bitwise approximation of the European call option payoff function.
 
 ## Reference
 
